@@ -39,29 +39,22 @@ with st.sidebar:
 
 # Display messages in history
 for msg in st.session_state.messages:
-  if parts := msg.get("parts", []):
-    with st.chat_message('human' if msg.get("role") == 'user' else 'ai'):
+  if parts := msg.parts:
+    with st.chat_message('human' if msg.role == 'user' else 'ai'):
       for p in parts:
-        st.write(p)
+        st.write(p.text)
 
 # Chat input
 if prompt := st.chat_input("What is up?"):
-  # User message
-  user_msg = {
-    "role": 'user',
-    "parts": [prompt]
-  }
-  
   # Display user message
   with st.chat_message('human'):
     st.write(prompt)
-  # Append to history
-  st.session_state.messages.append(user_msg)
 
   # Generate
   model = genai.GenerativeModel(model_name=model_name,
                                 generation_config=generation_config)
-  response = model.generate_content(st.session_state.messages, stream=True)
+  chat = model.start_chat(history=st.session_state.messages)
+  response = chat.send_message(prompt, stream=True)
 
   # Stream display
   with st.chat_message("ai"):
@@ -73,7 +66,4 @@ if prompt := st.chat_input("What is up?"):
   placeholder.write(text)
 
   # Append to history
-  st.session_state.messages.append({
-    'role': 'model',
-    'parts': [text]
-  })
+  st.session_state.messages = chat.history
