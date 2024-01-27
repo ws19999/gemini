@@ -40,10 +40,10 @@ with st.sidebar:
   model_name = st.selectbox("model_name", ['gemini-pro'])
   
   generation_config = {
-    "temperature": st.slider("temperature", min_value=0.0, max_value=1.0, value=0.9),
+    "temperature": st.slider("temperature", min_value=0.0, max_value=1.0, value=0.2),
     "max_output_tokens": st.number_input("max_tokens", min_value=1, value=2048),
-    "top_k": st.slider("top_k", min_value=1, value=32),
-    "top_p": st.slider("top_p", min_value=0.0, max_value=1.0, value=1.0),
+    "top_k": st.slider("top_k", min_value=1, value=40),
+    "top_p": st.slider("top_p", min_value=0.0, max_value=1.0, value=0.95),
   }
 
   # Tools
