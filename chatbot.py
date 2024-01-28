@@ -1,5 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
+import google.ai.generativelanguage as glm
+
 from tools import tools, handle_function_call
 
 def stream_display(response, placeholder):
@@ -10,6 +12,16 @@ def stream_display(response, placeholder):
         text += parts_text
         placeholder.write(text + "▌")
   return text
+
+def init_messages() -> None:
+  st.session_state.messages = []
+
+def undo() -> None:
+  st.session_state.messages.pop()
+
+def set_generate(state=True):
+  st.session_state.generate = state
+
 
 st.title("💬 Chatbot")
 st.caption("🚀 A streamlit chatbot powered by Google Gemini-Pro")
@@ -24,7 +36,15 @@ if "api_key" not in st.session_state:
 
 # Initialize chat history
 if "messages" not in st.session_state:
-  st.session_state.messages = []
+  init_messages()
+  set_generate(False)
+
+safety_settings={
+  'harassment':'block_none',
+  'hate':'block_none',
+  'sex':'block_none',
+  'danger':'block_none'
+}
 
 # Sidebar for parameters
 with st.sidebar:
@@ -34,6 +54,17 @@ with st.sidebar:
     st.session_state.api_key = st.text_input("Google API Key", type="password")
   else:
     genai.configure(api_key=st.session_state.api_key)
+
+  # Role selection and Undo
+  st.header("Chat")
+  chat_role = st.selectbox("role", ["user", "model"], index=0)
+  columns = st.columns([1,1,1])
+  with columns[0]:
+    st.button("Run", on_click=set_generate, type='primary', use_container_width=True)
+  with columns[1]:
+    st.button("Undo", on_click=undo, use_container_width=True)
+  with columns[2]:
+    st.button("Clear", on_click=init_messages, use_container_width=True)
 
   # ChatCompletion parameters
   st.header("Parameters")
@@ -52,38 +83,47 @@ with st.sidebar:
   tools_checkbox = [st.checkbox(n) for n in name_tools]
 
 # Display messages in history
-for msg in st.session_state.messages:
-  if text := msg.parts[0].text:
-    with st.chat_message('human' if msg.role == 'user' else 'ai'):
+for content in st.session_state.messages:
+  if text := content.parts[0].text:
+    with st.chat_message('human' if content.role == 'user' else 'ai'):
       st.write(text)
 
 # Chat input
 if prompt := st.chat_input("What is up?"):
-  # Display user message
-  with st.chat_message('human'):
+  if chat_role == 'user':
+    set_generate(True)
+  # Append to history
+  st.session_state.messages.append(
+    glm.Content(role=chat_role, parts=[glm.Part(text=prompt)])
+  )
+  # Display input message
+  with st.chat_message('human' if chat_role == 'user' else 'ai'):
     st.write(prompt)
 
+if st.session_state.generate:
+  set_generate(False)
   # Generate
   model = genai.GenerativeModel(
     model_name=model_name,
     generation_config=generation_config,
     tools=[tools[name_tools[i]] for i, check in enumerate(tools_checkbox) if check],
   )
-  chat = model.start_chat(history=st.session_state.messages)
-  response = chat.send_message(prompt, stream=True)
-
+  response = model.generate_content(st.session_state.messages, stream=True)
   # Stream display
   with st.chat_message("ai"):
     placeholder = st.empty()
-  
   text = stream_display(response, placeholder)
+  # Append to history
+  st.session_state.messages.append(response.candidates[0].content)
+
+  # Function calling
   if not text:
     if (content := handle_function_call(response.parts)) is not None:
       text = "Wait for function calling response..."
       placeholder.write(text + "▌")
-      response = chat.send_message(content, stream=True)
+      st.session_state.messages.append(content)
+      response = model.generate_content(st.session_state.messages, stream=True)
       text = stream_display(response, placeholder)
-  placeholder.write(text)
+      st.session_state.messages.append(response.candidates[0].content)
 
-  # Append to history
-  st.session_state.messages = chat.history
+  placeholder.write(text)
