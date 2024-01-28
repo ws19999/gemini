@@ -106,6 +106,7 @@ if st.session_state.generate:
   model = genai.GenerativeModel(
     model_name=model_name,
     generation_config=generation_config,
+    safety_settings=safety_settings,
     tools=[tools[name_tools[i]] for i, check in enumerate(tools_checkbox) if check],
   )
   response = model.generate_content(st.session_state.messages, stream=True)
