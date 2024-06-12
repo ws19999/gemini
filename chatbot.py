@@ -1,38 +1,27 @@
 import streamlit as st
 
-st.title("💬 Echo bot")
-st.caption("🚀 A streamlit echo bot")
+st.title("Echo Bot")
 
-# Initialize chat history
 if "messages" not in st.session_state:
-  st.session_state.messages = []
-
-# Display messages in history
-for msg in st.session_state.messages:
-  if content := msg.get("content", ""):
-    with st.chat_message(msg.get("role")):
-      st.write(content)
-
-# Chat input
+    st.session_state.messages = []
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
 if prompt := st.chat_input("What is up?"):
-  # User message
-  user_msg = {
-    "role": "user",
-    "content": prompt,
-  }
-  # Display user message
-  with st.chat_message("user"):
-    st.write(prompt)
-  # Append to history
-  st.session_state.messages.append(user_msg)
-
-  # Assistant message
-  assistant_msg = {
+# Display user message in chat message container
+    with st.chat_message("user"):
+        st.write(prompt)
+    # Add user message to chat history
+    st.session_state.messages.append({
+        "role": "user",
+        "content": prompt,
+        })
+    response = f"(ECHO) {prompt}"
+    # Display assistant response in chat message container
+    with st.chat_message("assistant"):
+        st.write(response)
+    # Add assistant response to chat history
+    st.session_state.messages.append({
     "role": "assistant",
-    "content": f"(ECHO) {prompt}"
-  }
-  # Display assistant message
-  with st.chat_message("assistant"):
-    st.write(assistant_msg.get("content"))
-  # Append to history
-  st.session_state.messages.append(assistant_msg)
+    "content": response,
+    })
